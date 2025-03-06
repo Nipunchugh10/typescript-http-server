@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TypeScript HTTP Server</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: #fff;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .header {
+            text-align: center;
+            padding: 3rem 0;
+            animation: fadeIn 1s ease-in;
+        }
+
+        .header h1 {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .content {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 2rem;
+            margin: 2rem 0;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+        }
+
+        .status-card {
+            background: rgba(255, 255, 255, 0.15);
+            padding: 1.5rem;
+            border-radius: 12px;
+            margin: 1rem 0;
+            transition: transform 0.3s ease;
+        }
+
+        .status-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            background: #4CAF50;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+
+        .endpoints {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+            margin-top: 2rem;
+        }
+
+        .endpoint-card {
+            background: rgba(255, 255, 255, 0.15);
+            padding: 1.5rem;
+            border-radius: 12px;
+            transition: all 0.3s ease;
+        }
+
+        .endpoint-card:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: scale(1.02);
+        }
+
+        .method {
+            display: inline-block;
+            padding: 0.3rem 0.8rem;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+        }
+
+        .get { background: #61affe; }
+        .post { background: #49cc90; }
+        .put { background: #fca130; }
+        .delete { background: #f93e3e; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .footer {
+            text-align: center;
+            padding: 2rem 0;
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }
+
+        /* New styles for query section */
+        .query-section {
+            background: rgba(255, 255, 255, 0.15);
+            padding: 2rem;
+            border-radius: 12px;
+            margin: 2rem 0;
+            animation: fadeIn 1.2s ease-in;
+        }
+
+        .query-form {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .query-input {
+            padding: 0.8rem 1rem;
+            border-radius: 8px;
+            border: none;
+            font-size: 1rem;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            width: 100%;
+        }
+
+        .query-input::placeholder {
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .query-button {
+            padding: 0.8rem 1.5rem;
+            border-radius: 8px;
+            border: none;
+            background: #4CAF50;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            align-self: flex-start;
+        }
+
+        .query-button:hover {
+            background: #3e8e41;
+            transform: translateY(-2px);
+        }
+
+        .response-container {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-top: 1.5rem;
+            min-height: 120px;
+            display: none;
+        }
+
+        .response-container.active {
+            display: block;
+            animation: fadeIn 0.5s ease-in;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            margin: 1rem 0;
+        }
+
+        .loading.active {
+            display: block;
+        }
+
+        .dot-flashing {
+            display: inline-block;
+            position: relative;
+            width: 10px;
+            height: 10px;
+            border-radius: 5px;
+            background-color: #fff;
+            color: #fff;
+            animation: dot-flashing 1s infinite linear alternate;
+            animation-delay: 0.5s;
+        }
+        
+        .dot-flashing::before, .dot-flashing::after {
+            content: '';
+            display: inline-block;
+            position: absolute;
+            top: 0;
+        }
+        
+        .dot-flashing::before {
+            left: -15px;
+            width: 10px;
+            height: 10px;
+            border-radius: 5px;
+            background-color: #fff;
+            color: #fff;
+            animation: dot-flashing 1s infinite alternate;
+            animation-delay: 0s;
+        }
+        
+        .dot-flashing::after {
+            left: 15px;
+            width: 10px;
+            height: 10px;
+            border-radius: 5px;
+            background-color: #fff;
+            color: #fff;
+            animation: dot-flashing 1s infinite alternate;
+            animation-delay: 1s;
+        }
+        
+        @keyframes dot-flashing {
+            0% { background-color: #fff; }
+            50%, 100% { background-color: rgba(255, 255, 255, 0.2); }
+        }
+
+        @media (max-width: 768px) {
+            .container { padding: 1rem; }
+            .header h1 { font-size: 2rem; }
+            .endpoints { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>TypeScript HTTP Server</h1>
+            <p>A modern, lightweight HTTP server implementation</p>
+        </header>
+
+        <main class="content">
+            <div class="status-card">
+                <span class="status-indicator"></span>
+                <span>Server Status: </span>
+                <strong>Running</strong>
+                <div id="uptime"></div>
+            </div>
+
+            <!-- New Query Section -->
+            <section class="query-section">
+                <h2>Ask the Server</h2>
+                <p>Enter your query below to get information about the server</p>
+                
+                <div class="query-form">
+                    <input type="text" id="query-input" class="query-input" placeholder="E.g., What features does the server have?">
+                    <button id="query-button" class="query-button">Submit Query</button>
+                    
+                    <div id="loading" class="loading">
+                        <div class="dot-flashing"></div>
+                    </div>
+                    
+                    <div id="response-container" class="response-container">
+                        <h3>Response:</h3>
+                        <p id="response-text"></p>
+                    </div>
+                </div>
+            </section>
+
+            <h2>Available Endpoints</h2>
+            <div class="endpoints">
+                <div class="endpoint-card">
+                    <span class="method get">GET</span>
+                    <h3>/api/hello</h3>
+                    <p>Returns a friendly greeting message</p>
+                </div>
+
+                <div class="endpoint-card">
+                    <span class="method get">GET</span>
+                    <h3>/api/query?q=question</h3>
+                    <p>Get answers to your questions about the server</p>
+                </div>
+
+                <div class="endpoint-card">
+                    <span class="method post">POST</span>
+                    <h3>/api/query</h3>
+                    <p>Submit questions via POST requests</p>
+                </div>
+
+                <div class="endpoint-card">
+                    <span class="method post">POST</span>
+                    <h3>/api/data</h3>
+                    <p>Accepts and processes JSON data</p>
+                </div>
+            </div>
+        </main>
+
+        <footer class="footer">
+            <p>© 2025 TypeScript HTTP Server. All rights reserved.</p>
+        </footer>
+    </div>
+
+    <script>
+        // Add a simple uptime counter
+        const startTime = new Date();
+        
+        function updateUptime() {
+            const now = new Date();
+            const diff = now - startTime;
+            const seconds = Math.floor(diff / 1000);
+            const minutes = Math.floor(seconds / 60);
+            const hours = Math.floor(minutes / 60);
+            
+            document.getElementById('uptime').textContent = 
+                `Uptime: ${hours}h ${minutes % 60}m ${seconds % 60}s`;
+        }
+
+        setInterval(updateUptime, 1000);
+        updateUptime();
+
+        // Query functionality
+        document.addEventListener('DOMContentLoaded', () => {
+            const queryInput = document.getElementById('query-input');
+            const queryButton = document.getElementById('query-button');
+            const responseContainer = document.getElementById('response-container');
+            const responseText = document.getElementById('response-text');
+            const loading = document.getElementById('loading');
+
+            queryButton.addEventListener('click', async () => {
+                const query = queryInput.value.trim();
+                
+                if (!query) {
+                    alert('Please enter a query');
+                    return;
+                }
+                
+                // Show loading indicator
+                loading.classList.add('active');
+                responseContainer.classList.remove('active');
+                
+                try {
+                    const response = await fetch('/api/query?q=' + encodeURIComponent(query));
+                    const data = await response.json();
+                    
+                    // Display the response
+                    responseText.textContent = data.answer;
+                    responseContainer.classList.add('active');
+                } catch (error) {
+                    responseText.textContent = 'Error connecting to server. Please try again.';
+                    responseContainer.classList.add('active');
+                } finally {
+                    loading.classList.remove('active');
+                }
+            });
+            
+            // Allow pressing Enter to submit
+            queryInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    queryButton.click();
+                }
+            });
+        });
+    </script>
+</body>
+</html>
