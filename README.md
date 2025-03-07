@@ -76,6 +76,7 @@ http://localhost:3000
 │   ├── error.ts           # Custom error handling
 │   ├── app.ts             # Server entry point
 ├── 📁 public/              # Static files (index.html, styles, etc.)
+|   ├── index.html            # Server Index page
 ├── tsconfig.json           # TypeScript configuration
 ├── package.json           # Dependencies & scripts
 └── README.md              # Documentation
